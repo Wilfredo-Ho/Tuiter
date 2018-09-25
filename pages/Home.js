@@ -1,8 +1,9 @@
 import React, {Component} from 'react';
-import { View, Text, StyleSheet, FlatList, Image, Dimensions} from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, Dimensions, TouchableHighlight} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import AvatarArr from '../images/avatar';
 
+const block_width = Math.floor((Dimensions.get('window').width - 16) / 4);
 export default class Home extends Component { 
     static navigationOptions = {
         tabBarLabel: '身边',
@@ -34,7 +35,7 @@ export default class Home extends Component {
         };
         //按照距离重排数组
         this.setState({
-            data: arr.sort((item1, item2) => item1.distance - item2.distance > 0)
+            data: arr.sort((item1, item2) => item1.distance - item2.distance)
         })
     }
 
@@ -50,17 +51,23 @@ export default class Home extends Component {
         );
     }
 
+    _onPressSingle (key) {
+        this.props.navigation.navigate('Detail');
+    }
+
     renderList ({item}) {
         return (
-            <View style={styles.block}>
-                <Image source={AvatarArr[`avatar${item.avatar}`]} resizeMode="cover" style={{width: 130, height: 130}} />
-                <View style={styles.info}>
-                    { item.online && (<View style={styles.online} />) }
-                    { item.level === 5 && <Text style={styles.levelHigh}>V</Text>}
-                    { item.level === 3 && <Text style={styles.levelLow}>V</Text>}
-                    <Text style={styles.distance}>{`${item.distance}km`}</Text>
+            <TouchableHighlight onPress={() => this._onPressSingle(item.key)}>
+                <View style={styles.block}>
+                    <Image source={AvatarArr[`avatar${item.avatar}`]} resizeMode="cover" style={{width: block_width, height: block_width}} />
+                    <View style={styles.info}>
+                        { item.online && (<View style={styles.online} />) }
+                        { item.level === 5 && <Text style={styles.levelHigh}>V</Text>}
+                        { item.level === 3 && <Text style={styles.levelLow}>V</Text>}
+                        <Text style={styles.distance}>{`${item.distance}km`}</Text>
+                    </View>
                 </View>
-            </View>
+            </TouchableHighlight>
         );
     }
 
@@ -73,7 +80,7 @@ export default class Home extends Component {
                <FlatList
                 data={this.state.data}
                 renderItem={this.renderList}
-                numColumns={Math.floor(Dimensions.get('window').width / 130)}
+                numColumns={4}
                 columnWrapperStyle={styles.columnWrapper}
                />
             </View>
@@ -105,7 +112,7 @@ const styles = StyleSheet.create({
     },
     online: {
         position: 'absolute',
-        top: -128,
+        top: -block_width + 2,
         left: 2,
         width: 10,
         height: 10,

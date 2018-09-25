@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {Platform, StyleSheet, Text, View, FlatList, Image, ViewPagerAndroid} from 'react-native';
+import {StyleSheet} from 'react-native';
 import {
   StackNavigator,
   createBottomTabNavigator,
@@ -7,6 +7,7 @@ import {
 } from 'react-navigation';
 
 import Login from './pages/Login';
+import Detail from './pages/Detail';
 import HomeScreen from './pages/Home';
 import MessageScreen from './pages/Message';
 import CommunityScreen from './pages/Community';
@@ -60,9 +61,10 @@ const App = StackNavigator({
     navigationOptions: ({navigation}) => ({
       header: null
     })
-  }
+  },
+  Detail: Detail
 }, {
-  initialRouteName: 'Home',
+  initialRouteName: 'Login',
   headerMode: 'screen'
 });
 
@@ -70,7 +72,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  
 });
 
 export default App;

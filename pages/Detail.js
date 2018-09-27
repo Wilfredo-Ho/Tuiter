@@ -130,6 +130,13 @@ export default class Detail extends Component {
         }
     };
 
+    constructor(props){
+        super(props);
+        this.state = {
+        };
+        this._navigateToMessage = this._navigateToMessage.bind(this);
+    }
+
     _renderItem ({item}) {
         let imgCount = item.pics.length;
         let count = imgCount > 3 ? 3 : imgCount;
@@ -168,6 +175,10 @@ export default class Detail extends Component {
         console.log(event.nativeEvent.contentOffset.y);
     }
 
+    _navigateToMessage () {
+        this.props.navigation.navigate('Message');
+    }
+
     render () {
         return(
             <ScrollView style={styles.container} onScroll={this._onScroll}>
@@ -200,7 +211,7 @@ export default class Detail extends Component {
                                 <Icon name="star" style={styles.buttonIcon} /> 关注
                             </Text>
                         </TouchableHighlight>
-                        <TouchableHighlight onPress={() => {}} style={styles.button} underlayColor="white">
+                        <TouchableHighlight onPress={this._navigateToMessage} style={styles.button} underlayColor="white">
                             <Text style={styles.buttonText}>
                                 <Icon name="rss" style={styles.buttonIcon} /> 聊天
                             </Text>

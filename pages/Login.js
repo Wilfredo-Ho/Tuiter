@@ -6,9 +6,12 @@ import {
     TextInput,
     TouchableHighlight,
     Alert,
-    ToastAndroid
+    ToastAndroid,
+    Dimensions
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+
+const paddingWidth = Dimensions.get('window').width * 0.15;
 
 export default class Login extends Component { 
     constructor(props){
@@ -81,8 +84,8 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
         paddingTop: 80,
-        paddingLeft: 100,
-        paddingRight: 100
+        paddingLeft: paddingWidth,
+        paddingRight: paddingWidth
     },
     logo: {
         alignItems: 'center',

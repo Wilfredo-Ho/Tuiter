@@ -55,7 +55,12 @@ const Tab = createBottomTabNavigator(
 );
 
 const App = StackNavigator({
-  Login: Login,
+  Login: {
+    screen: Login,
+    navigationOptions: ({ navigation }) => ({
+      header: null
+    })
+  },
   Home: {
     screen: Tab,
     navigationOptions: ({navigation}) => ({

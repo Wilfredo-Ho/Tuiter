@@ -1,7 +1,19 @@
 import React, {Component} from 'react';
-import { View, Text, StyleSheet, FlatList, Image, Dimensions, TouchableHighlight} from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    FlatList,
+    Image,
+    Dimensions,
+    TouchableHighlight,
+    ToastAndroid,
+    AsyncStorage
+} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import AvatarArr from '../images/avatar';
+import axios from 'axios';
+import { SERVER_URL } from '../util/urls';
 
 const block_width = Math.floor((Dimensions.get('window').width - 16) / 4);
 export default class Home extends Component { 
@@ -16,31 +28,71 @@ export default class Home extends Component {
     constructor (props) {
         super(props);
         this.state = {
-            data: null
+            data: null,
+            userArr: []
         };
-        this.generateData = this.generateData.bind(this);
         this.renderList = this.renderList.bind(this);
+        this.getGeoLocation = this.getGeoLocation.bind(this);
+        this.getAllUser = this.getAllUser.bind(this);
     } 
 
-    generateData () {
-        const arr = [];
-        for(let i = 0; i < 100; i++) {
-            arr.push({
-                key: i + 1,
-                online: Math.random() > 0.7 ? true : false,
-                avatar: Math.ceil(Math.random() * 10),
-                level: Math.ceil(Math.random() * 5),
-                distance: (Math.random() * 10).toFixed(2)
-            });
-        };
-        //按照距离重排数组
-        this.setState({
-            data: arr.sort((item1, item2) => item1.distance - item2.distance)
+    getAllUser () {
+        axios.get(SERVER_URL + '/users/allUser')
+        .then(response => response.data)
+        .then(res => {
+            if(res.status === 0) {
+                let arr = res.lists.map(item => {
+                    return {
+                        uid: item['uid'],
+                        name: item['username'],
+                        online: true,
+                        avatar: 2,
+                        level: 5,
+                        distance: 0.1
+                    }
+                });
+                this.setState({
+                    data: arr
+                })
+            }
         })
     }
 
+    //获取用户地理位置
+    getGeoLocation () {
+        navigator.geolocation.getCurrentPosition(
+            location => {
+                new Promise((resolve, reject) => {
+                    AsyncStorage.getItem('userid', (error, result) => {
+                        if(!error){
+                            resolve(result);
+                        } else {
+                            reject(error);
+                        }
+                    })
+                })
+                .then(res => {
+                    axios.post(SERVER_URL + '/users/addLocation', {
+                            uid: res,
+                            lat: location.coords.latitude,
+                            lng: location.coords.longitude
+                        })
+                        .then(response => response.data)
+                        .then(res => {
+                            if (res.status !== 0) {
+                                ToastAndroid.show("存储定位信息失败" + res.message, ToastAndroid.SHORT);
+                            }
+                        })
+                })
+            },
+            error => {
+                ToastAndroid.show(error, ToastAndroid.SHORT);
+            })
+    }
+
     componentDidMount () {
-        this.generateData();
+        this.getAllUser();
+        this.getGeoLocation();
     }
 
     renderMessage () {
@@ -52,12 +104,14 @@ export default class Home extends Component {
     }
 
     _onPressSingle (key) {
-        this.props.navigation.navigate('Detail');
+        this.props.navigation.navigate('Chat', {
+            title: key,
+        });
     }
 
     renderList ({item}) {
         return (
-            <TouchableHighlight onPress={() => this._onPressSingle(item.key)}>
+            <TouchableHighlight onPress={() => this._onPressSingle(item.uid)}>
                 <View style={styles.block}>
                     <Image source={AvatarArr[`avatar${item.avatar}`]} resizeMode="cover" style={{width: block_width, height: block_width}} />
                     <View style={styles.info}>
@@ -80,8 +134,10 @@ export default class Home extends Component {
                <FlatList
                 data={this.state.data}
                 renderItem={this.renderList}
+                extraData={this.state}
                 numColumns={4}
                 columnWrapperStyle={styles.columnWrapper}
+                keyExtractor={(item, index) => index.toString()}
                />
             </View>
         );

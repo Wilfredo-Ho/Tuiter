@@ -9,7 +9,8 @@ import {
     TouchableHighlight,
     TextInput,
     Modal,
-    Picker
+    AsyncStorage,
+    ToastAndroid
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Entypo';
 
@@ -49,14 +50,19 @@ export default class Mine extends Component {
     }
 
     _onPressButton () {
-        this.props.navigation.navigate('Login');
+        AsyncStorage.removeItem('userid', (err) => {
+            if(!err) {
+                this.props.navigation.navigate('Login');
+            } else {
+                ToastAndroid.show('退出登录失败，请稍候重试', ToastAndroid.SHORT);
+            }
+        });
     }
 
     _changeName() {
         let view = (<TextInput
                         onChangeText={(text) => this.setState({name:text})}
                         style={{ borderBottomWidth: 2, borderBottomColor: '#1890ff'}}
-                        value={this.state.name}
                         autoFocus={true}
                     />);
         this.setState({
@@ -107,7 +113,6 @@ export default class Mine extends Component {
         let view = (<TextInput
                         onChangeText={(text) => this.setState({text})}
                         style={{ borderBottomWidth: 2, borderBottomColor: '#1890ff'}}
-                        value={this.state.text}
                         autoFocus={true}
                     />);
         this.setState({

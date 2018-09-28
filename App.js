@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {StyleSheet} from 'react-native';
+import {StyleSheet, AsyncStorage, Text} from 'react-native';
 import {
   StackNavigator,
   createBottomTabNavigator,
@@ -7,7 +7,9 @@ import {
 } from 'react-navigation';
 
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Detail from './pages/Detail';
+import Chat from './pages/Chat';
 import HomeScreen from './pages/Home';
 import MessageScreen from './pages/Message';
 import CommunityScreen from './pages/Community';
@@ -55,6 +57,12 @@ const Tab = createBottomTabNavigator(
 );
 
 const App = StackNavigator({
+  Register: {
+    screen: Register,
+    navigationOptions: ({ navigation }) => ({
+      header: null
+    })
+  },
   Login: {
     screen: Login,
     navigationOptions: ({ navigation }) => ({
@@ -67,7 +75,17 @@ const App = StackNavigator({
       header: null
     })
   },
-  Detail: Detail
+  Detail: Detail,
+  Chat: {
+    screen: Chat,
+    navigationOptions: ({navigation}) => ({
+      headerTitle: <Text style={{fontWeight: 'bold', fontSize: 16}}>{`和${navigation.state.params.title}聊天`}</Text>,
+      headerTitleStyle: {
+        flex: 1,
+        textAlign: 'center'
+      }
+    })
+  }
 }, {
   initialRouteName: 'Login',
   headerMode: 'screen'

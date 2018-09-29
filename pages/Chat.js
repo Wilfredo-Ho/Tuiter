@@ -16,14 +16,19 @@ import io from 'socket.io-client';
 
 let socket = null;
 
-const dialogData = [
-    {
-        id: 1,
-        user: 'self',
-        time: '2018/9/27 11:30',
-        text: '中午好'
-    }
-];
+let current_user_id = -1;
+
+new Promise((resolve, reject) => {
+    AsyncStorage.getItem('userid', (error, result) => {
+        if (error) {
+            reject(error)
+        } else {
+            resolve(result)
+        }
+    })
+}).then(userid => {
+    current_user_id = userid;
+});
 
 export default class Chat extends Component { 
     constructor(props){
@@ -63,38 +68,28 @@ export default class Chat extends Component {
     _sendMessage () {
         if(this.state.text){
             socket.emit('sendMsg', {
-                userid: this.props.navigation.state.params.title,
-                text: this.state.text
+                from: current_user_id,
+                to: this.props.navigation.state.params.title,
+                text: this.state.text,
             });
-            this.refs.textInput.clear();
             this.setState({
                 text: ''
             });
+            this.refs.textInput.clear();
         }
     }
 
     componentDidMount () {
         socket = io('ws://192.168.10.100:3001');
         socket.on('connect', () => {
-            new Promise((resolve, reject) => {
-                AsyncStorage.getItem('userid', (error, result) => {
-                    if (error) {
-                        reject(error)
-                    } else {
-                        resolve(result)
-                    }
-                })
-            }).then(userid => {
-                socket.emit('login', {
-                    userid: userid
-                });
+            socket.emit('login', {
+                userid: current_user_id
             });
         });
 
         socket.on('receiveMsg', (data) => {
-            console.log(data);
             let obj = {};
-            if (data.userid === this.props.navigation.state.params.title) {
+            if (data.target === current_user_id) {
                 obj['user'] = 'self';
             } else {
                 obj['user'] = 'Tom';
@@ -104,14 +99,26 @@ export default class Chat extends Component {
 
             this.setState({
                 dialog: this.state.dialog.concat(obj)
-            })
+            });
+
+            this.refs.dialogList.scrollToEnd();
         });
+
+
+        socket.on('sendError', (data) => {
+            alert(data);
+        })
+
+        socket.on('sendSuccess', (data) => {
+            alert(data);
+        })
     }
 
     render () {
         return(
             <View style={styles.container}>
                 <FlatList
+                    ref='dialogList'
                     data = { this.state.dialog }
                     extraData={this.state}
                     renderItem={this._renderItem}

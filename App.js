@@ -69,7 +69,7 @@ const App = StackNavigator({
       header: null
     })
   },
-  Home: {
+  Message: {
     screen: Tab,
     navigationOptions: ({navigation}) => ({
       header: null

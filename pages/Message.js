@@ -1,47 +1,21 @@
 import React, {Component} from 'react';
-import { View, Text, StyleSheet, Button, FlatList, Image, Dimensions, TouchableHighlight } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    FlatList,
+    Image,
+    ToastAndroid,
+    TouchableHighlight,
+    AsyncStorage
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Entypo';
-import moment from 'moment';
+import { formatDatetime, SERVER_URL } from '../util/urls';
+import axios from 'axios';
 
-const dialogData = [
-    {
-        id: 1,
-        user: 'self',
-        time: '2018/9/27 11:30',
-        text: '中午好'
-    },
-    {
-        id: 2,
-        user: 'Tom',
-        time: '2018/9/27 11:32',
-        text: '中午好，待会儿咱们吃什么'
-    },
-    {
-        id: 3,
-        user: 'self',
-        time: '2018/9/27 11:34',
-        text: '不知道，不太有胃口，你来定吧'
-    },
-    {
-        id: 4,
-        user: 'Tom',
-        time: '2018/9/27 11:36',
-        text: '听说楼下新开了一家粥铺，我们去尝尝吧'
-    },
-    {
-        id: 5,
-        user: 'self',
-        time: '2018/9/27 11:38',
-        text: '好的'
-    },
-    {
-        id: 6,
-        user: 'self',
-        time: '2018/9/27 13:10',
-        visible: false,
-        text: '你到哪里了?怎么半天不回复我消息，你是不是有什么事情耽误了，需要我帮你带饭吗？'
-    }
-];
+let current_user_id = -1;
+
+
 
 export default class Message extends Component { 
     static navigationOptions = {
@@ -54,7 +28,27 @@ export default class Message extends Component {
 
     constructor(props){
         super(props);
+        this.state = {
+            news: []
+        };
         this._handlePress = this._handlePress.bind(this);
+        this.getNewsList = this.getNewsList.bind(this);
+        this.navigationWillFocusListener = props.navigation.addListener('willFocus', () => {
+            new Promise((resolve, reject) => {
+                AsyncStorage.getItem('userid', (error, result) => {
+                    if (error) {
+                        reject(error)
+                    } else {
+                        resolve(result)
+                    }
+                })
+            }).then(userid => {
+                current_user_id = userid;
+                this.getNewsList(userid);
+            }).catch(error => {
+                ToastAndroid.show(error.message, ToastAndroid.LONG);
+            })
+        });
     }
 
     _handlePress () {
@@ -64,28 +58,53 @@ export default class Message extends Component {
 
     _renderItem({item}) {
         return (
-            <View style={{marginTop: 4}}>
-                {
-                    item.visible && (<Text style={{backgroundColor: '#ccc', color: '#fff', padding: 2, margin: 10, alignItems: 'center', width: 100}}>5分钟前</Text>)
-                }
-                <View style={ item.user === 'self' ? styles.selfDialog : styles.otherDialog }>
-                    <TouchableHighlight onPress={() => this._handlePress}>
-                        <Image source={require('../images/avatar/2.jpeg')} style={{ width: 40, height: 40, borderRadius: 20 }} />
-                    </TouchableHighlight>
-                    <View>
-                        <Text style={[styles.textWpt, item.user === 'self' ? styles.selfText : styles.otherText]} >{item.text}</Text>
-                        <View style={item.user === 'self' ? styles.rightTriangle : styles.leftTriangle} />
+            <TouchableHighlight onPress={() => this._handlePress} underlayColor='white'>
+                <View style={ styles.itemWpt }>
+                    <Image source={require('../images/avatar/2.jpeg')} style={{ width: 40, height: 40, borderRadius: 20 }} />
+                    <View style={ styles.contentWpt }>
+                        <View style={styles.row}>
+                            <Text style={styles.title}>{item.username}</Text>
+                            <Text style={styles.time}>{formatDatetime(item.time)}</Text>
+                        </View>
+                        <View style={styles.row}>
+                            <Text style={styles.text}>{item.text}</Text>
+                            <Text style={styles.badge}>{(item.count > 99) ? 99 : item.count}</Text>
+                        </View>
                     </View>
                 </View>
-            </View>
+            </TouchableHighlight>
         );
     }
 
+    getNewsList (value) {
+        axios.post(SERVER_URL + '/news/unreadList', {
+                id: value
+            })
+            .then(reponse => reponse.data)
+            .then(res => {
+                if (res.status === 0) {
+                    this.setState({
+                        news: res.lists
+                    })
+                } else {
+                    ToastAndroid.show(res.message, ToastAndroid.LONG);
+                }
+            })
+    }
+
+    componentWillUnmount() {
+        this.navigationWillFocusListener.remove();
+    }
+
     render () {
+        if (this.state.news.length === 0) {
+            return (<View style={{ justifyContent: 'center', alignItems: 'center', flex: 1}}><Text>暂无消息</Text></View>)
+        }
+
         return(
             <View style={styles.container}>
                 <FlatList
-                    data={dialogData}
+                    data={this.state.news}
                     renderItem={this._renderItem}
                     keyExtractor={(item, index) => index.toString()}
                 />
@@ -97,61 +116,42 @@ export default class Message extends Component {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        margin: 10,
     },
-    selfDialog: {
-        alignItems: 'center',
-        flexDirection: 'row-reverse',
-    },
-    otherDialog: {
-        alignItems: 'center',
+    itemWpt: {
         flexDirection: 'row',
+        alignItems: 'center'
     },
-    selfText: {
-        backgroundColor: '#69c0ff',
+    contentWpt: {
+        flex: 1,
+        borderBottomColor: '#ccc',
+        borderBottomWidth: 1,
+        padding: 4
+    },
+    row: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 4
+    },
+    title: {
+        fontSize: 14,
+        fontWeight: 'normal',
+        color: '#000'
+    },
+    time: {
+        color: '#bfbfbf'
+    },
+    text: {
+        color: '#595959'
+    },
+    badge: {
+        width: 16,
+        height: 16,
+        lineHeight: 16,
+        backgroundColor: '#f5222d',
+        borderRadius: 8,
+        fontSize: 10,
         color: '#fff',
-        marginRight: 10,
-    },
-    otherText: {
-        backgroundColor: '#f5f5f5',
-        color: '#333',
-        marginLeft: 10,
-    },
-    textWpt: {
-        padding: 10,
-        paddingTop: 8,
-        paddingBottom: 8,
-        borderRadius: 4,
-        maxWidth: Dimensions.get('window').width * 0.7
-    },
-    rightTriangle: {
-        width: 0,
-        height: 0,
-        borderTopWidth: 4,
-        borderTopColor: 'transparent',
-        borderBottomWidth: 4,
-        borderBottomColor: 'transparent',
-        borderRightWidth: 4,
-        borderRightColor: 'transparent',
-        borderLeftWidth: 4,
-        borderLeftColor: '#69c0ff',
-        position: 'absolute',
-        right: 2,
-        top: 10
-    },
-    leftTriangle: {
-        width: 0,
-        height: 0,
-        borderTopWidth: 4,
-        borderTopColor: 'transparent',
-        borderBottomWidth: 4,
-        borderBottomColor: 'transparent',
-        borderRightWidth: 4,
-        borderRightColor: '#f5f5f5',
-        borderLeftWidth: 4,
-        borderLeftColor: 'transparent',
-        position: 'absolute',
-        left: 2,
-        top: 10
+        textAlign: 'center'
     }
 });

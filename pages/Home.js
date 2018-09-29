@@ -16,6 +16,20 @@ import axios from 'axios';
 import { SERVER_URL } from '../util/urls';
 
 const block_width = Math.floor((Dimensions.get('window').width - 16) / 4);
+
+let current_user_id = -1;
+
+new Promise((resolve, reject) => {
+    AsyncStorage.getItem('userid', (error, result) => {
+        if (error) {
+            reject(error)
+        } else {
+            resolve(result)
+        }
+    })
+}).then(userid => {
+    current_user_id = userid;
+});
 export default class Home extends Component { 
     static navigationOptions = {
         tabBarLabel: '身边',
@@ -41,7 +55,7 @@ export default class Home extends Component {
         .then(response => response.data)
         .then(res => {
             if(res.status === 0) {
-                let arr = res.lists.map(item => {
+                let arr = res.lists.filter(item => item.uid != current_user_id).map(item => {
                     return {
                         uid: item['uid'],
                         name: item['username'],

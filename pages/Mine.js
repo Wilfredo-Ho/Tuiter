@@ -13,6 +13,13 @@ import {
     ToastAndroid
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Entypo';
+import axios from 'axios';
+import {SERVER_URL} from '../util/urls';
+
+const dict = {
+    gender: ["保密", "男", "女"],
+    status: ["保密", "单身", "约会中", "已婚"],
+}
 
 export default class Mine extends Component { 
     static navigationOptions = {
@@ -28,16 +35,16 @@ export default class Mine extends Component {
         this.state = {
             modalVisible: false,
             modalTitle: '昵称',
-            gender: 'male',
             modalContent: null,
             hasFooter: true,
-            name: '小新',
-            changedName: '',
-            gender: '男',
-            status: '约会中',
-            sign: '雕栏玉砌应犹在，只是朱颜改',
-            changedSign: '',
-            text: ''
+            text: '',
+            changeType: 'username', //输入类型： 用户名、签名
+            user: {
+                username: '',
+                gender: '',
+                status: '',
+                sign: '' 
+            }
         };
         this._onPressButton = this._onPressButton.bind(this);
         this.setModalVisible = this.setModalVisible.bind(this);
@@ -47,6 +54,24 @@ export default class Mine extends Component {
         this._renderStatusList = this._renderStatusList.bind(this);
         this._changeStatus = this._changeStatus.bind(this);
         this._changeSign = this._changeSign.bind(this);
+        this.submitChange = this.submitChange.bind(this);
+        this.changeMsg = this.changeMsg.bind(this);
+        this.navigationWillFocusListener = props.navigation.addListener('willFocus', () => {
+            new Promise((resolve, reject) => {
+                AsyncStorage.getItem('userid', (error, result) => {
+                    if (error) {
+                        reject(error)
+                    } else {
+                        resolve(result)
+                    }
+                })
+            }).then(userid => {
+                current_user_id = userid;
+                this.getUserInfo(userid);
+            }).catch(error => {
+                ToastAndroid.show(error.message, ToastAndroid.LONG);
+            })
+        });
     }
 
     _onPressButton () {
@@ -59,9 +84,30 @@ export default class Mine extends Component {
         });
     }
 
+    getUserInfo (value) {
+        axios.post(SERVER_URL + '/users/getUserById', {
+                id: value
+            })
+            .then(reponse => reponse.data)
+            .then(res => {
+                if (res.status === 0) {
+                    this.setState({
+                        user: {
+                            username: res.lists[0].username,
+                            gender: res.lists[0].gender,
+                            status: res.lists[0].status,
+                            sign: res.lists[0].sign
+                        }
+                    })
+                } else {
+                    ToastAndroid.show(res.message, ToastAndroid.LONG);
+                }
+            })
+    }
+
     _changeName() {
         let view = (<TextInput
-                        onChangeText={(text) => this.setState({name:text})}
+                        onChangeText={(text) => this.setState({text})}
                         style={{ borderBottomWidth: 2, borderBottomColor: '#1890ff'}}
                         autoFocus={true}
                     />);
@@ -69,13 +115,13 @@ export default class Mine extends Component {
             modalTitle: '昵称',
             modalContent: view,
             modalVisible: true,
-            hasFooter: true
+            hasFooter: true,
+            changeType: 'username'
         })
     }
 
     _renderGenderList () {
-        let arr = ["男", "女", "保密"];
-        let viewItems = arr.map((item, index) => (<TouchableHighlight onPress={() => this._changeGender(item)} key={index} style={styles.item}><Text style={styles.itemText}>{item}</Text></TouchableHighlight>));
+        let viewItems = dict.gender.map((item, index) => (<TouchableHighlight onPress={() => this._changeGender(item)} key={index} style={styles.item}><Text style={styles.itemText}>{item}</Text></TouchableHighlight>));
         this.setState({
             modalTitle: '性别',
             modalContent: viewItems,
@@ -85,15 +131,11 @@ export default class Mine extends Component {
     }
 
     _changeGender (value) {
-        this.setState({
-            modalVisible: false,
-            gender: value
-        });
+        this.changeMsg('/users/changeGender', dict.gender.indexOf(value));
     }
 
     _renderStatusList () {
-        let arr = ["单身", "约会中", "已婚", "保密"];
-        let viewItems = arr.map((item, index) => (<TouchableHighlight onPress={() => this._changeStatus(item)} key={index} style={styles.item}><Text style={styles.itemText}>{item}</Text></TouchableHighlight>));
+        let viewItems = dict.status.map((item, index) => (<TouchableHighlight onPress={() => this._changeStatus(item)} key={index} style={styles.item}><Text style={styles.itemText}>{item}</Text></TouchableHighlight>));
         this.setState({
             modalTitle: '当前状态',
             modalContent: viewItems,
@@ -103,10 +145,7 @@ export default class Mine extends Component {
     }
 
     _changeStatus (value) {
-        this.setState({
-            modalVisible: false,
-            status: value
-        });
+        this.changeMsg('/users/changeStatus', dict.status.indexOf(value));
     }
 
     _changeSign () {
@@ -119,7 +158,8 @@ export default class Mine extends Component {
             modalTitle: '签名',
             modalContent: view,
             modalVisible: true,
-            hasFooter: true
+            hasFooter: true,
+            changeType: 'sign'
         })
     }
 
@@ -127,19 +167,42 @@ export default class Mine extends Component {
         this.setState({ modalVisible: visible });
     }
 
-    submitChange () {
-        alert("提交成功");
-    }
+    changeMsg (url, value) {
+        axios.post(SERVER_URL + url, {
+            id: current_user_id,
+            value
+        })
+        .then(response => response.data)
+        .then(res => {
+            if (res.status === 0) {
+                this.getUserInfo(current_user_id);
+            } else {
+                ToastAndroid.show(res.message, ToastAndroid.LONG);
+            }
+        })
 
-    componentDidMount () {
         this.setState({
-            changedName: this.state.name,
-            changedSign: this.state.sign
+            text: '',
+            modalVisible: false
         });
     }
 
+    submitChange () {
+        if (this.state.changeType === 'sign') {
+            this.changeMsg('/users/changeSign', this.state.text);
+        }
+
+        if(this.state.changeType === 'username') {
+            this.changeMsg('/users/changeName', this.state.text);
+        }
+    }
+
+    componentWillUnmount () {
+        this.navigationWillFocusListener.remove();
+    }
+
     render () {
-        const { changedName, gender, status, changedSign} = this.state;
+        const { username, gender, status, sign} = this.state.user;
         return(
             <View style={styles.container}>
                 <View style={styles.groupWpt}>
@@ -149,39 +212,24 @@ export default class Mine extends Component {
                     </View>
                     <TouchableOpacity onPress={this._changeName} style={styles.group}>
                         <Text style={styles.title}>昵称</Text>
-                        <Text>{changedName}</Text>
+                        <Text>{username}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={this._renderGenderList} style={styles.group}>
                         <Text style={styles.title}>性别</Text>
-                        <Text>{gender}</Text>
+                        <Text>{dict.gender[gender]}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={this._renderStatusList} style={styles.group}>
                         <Text style={styles.title}>状态</Text>
-                        <Text>{status}</Text>
+                        <Text>{dict.status[status]}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={this._changeSign} style={{...styles.group, borderBottomWidth: 0}}>
                         <Text style={styles.title}>签名</Text>
-                        <Text>{changedSign}</Text>
+                        <Text>{sign}</Text>
                     </TouchableOpacity>
                 </View>
                 <View style={{marginTop: 40, alignItems: 'center',}}>
                     <Button onPress={this._onPressButton} title="退出登录"></Button>
                 </View>
-
-                {/* <Picker
-                    selectedValue={this.state.gender}
-                    style={{ height: 50, width: 100 }}
-                    onValueChange={(itemValue, itemIndex) => this.setState({ gender: itemValue})}>
-                    <Picker.Item label='男' value='male' />
-                    <Picker.Item label='女' value='female' />
-                    <Picker.Item label='保密' value='secret' />
-                    <Picker.Item label='男' value='male' />
-                    <Picker.Item label='女' value='female' />
-                    <Picker.Item label='保密' value='secret' />
-                    <Picker.Item label='男' value='male' />
-                    <Picker.Item label='女' value='female' />
-                    <Picker.Item label='保密' value='secret' />
-                </Picker> */}
 
                 <Modal
                     animationType="fade"
@@ -263,7 +311,8 @@ const styles = StyleSheet.create({
         marginTop: 10
     },
     item: {
-        margin: 6
+        margin: 10,
+        marginLeft: 0
     },
     itemText: {
         fontSize: 14

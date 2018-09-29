@@ -49,7 +49,7 @@ export default class Login extends Component {
             })
             .then(response => response.data)
             .then(res => {
-                ToastAndroid.show(res.message, ToastAndroid.SHORT);
+                ToastAndroid.show(res.message, ToastAndroid.LONG);
                 if(res.status === 0) {
                     AsyncStorage.setItem('userid', res.userid, error => {
                         if (error) {
